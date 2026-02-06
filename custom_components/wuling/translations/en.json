@@ -126,6 +126,15 @@
       "plugging": {
         "name": "充电枪状态"
       },
+      "vec_charge_sts": {
+        "name": "否正在充电"
+      },
+      "left_charge_time": {
+        "name": "剩余充电时间"
+      },
+      "charging_current": {
+        "name": "当前充电电流"
+      },
       "ac_status": {
         "name": "空调状态"
       },

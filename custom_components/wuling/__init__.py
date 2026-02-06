@@ -20,6 +20,8 @@ from homeassistant.const import (
     UnitOfPressure,
     UnitOfTemperature,
     UnitOfElectricPotential,
+    UnitOfElectricCurrent,
+    UnitOfTime,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
@@ -222,6 +224,20 @@ class StateCoordinator(DataUpdateCoordinator):
             BinarySensorConv('plugging', prop='carStatus.vecChrgingSts').with_option({
                 'icon': 'mdi:power-plug',
                 'device_class': BinarySensorDeviceClass.PLUG,
+            }),
+            BinarySensorConv('vec_charge_sts', prop='carStatus.vecChargeSts').with_option({
+                'device_class': BinarySensorDeviceClass.BATTERY_CHARGING,
+            }),
+            NumberSensorConv('left_charge_time', prop='carStatus.leftChargeTime').with_option({
+                'icon': 'mdi:timer-sand',
+                'state_class': SensorStateClass.MEASUREMENT,
+                'unit_of_measurement': UnitOfTime.MINUTES,
+            }),
+            NumberSensorConv('charging_current', prop='carStatus.obcOtpCur').with_option({
+                'icon': 'mdi:current-ac',
+                'state_class': SensorStateClass.MEASUREMENT,
+                'device_class': SensorDeviceClass.CURRENT,
+                'unit_of_measurement': UnitOfElectricCurrent.AMPERE,
             }),
             MapSensorConv('key_status', prop='carStatus.keyStatus', map={
                 '0': '无钥匙',
