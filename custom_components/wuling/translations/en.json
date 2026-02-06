@@ -129,6 +129,9 @@
       "vec_charge_sts": {
         "name": "否正在充电"
       },
+      "charging_power": {
+        "name": "充电功率"
+      },
       "left_charge_time": {
         "name": "剩余充电时间"
       },

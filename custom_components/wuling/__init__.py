@@ -22,6 +22,7 @@ from homeassistant.const import (
     UnitOfElectricPotential,
     UnitOfElectricCurrent,
     UnitOfTime,
+    UnitOfPower,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
@@ -82,6 +83,21 @@ class NonZeroNumberSensorConv(NumberSensorConv):
             return
         final_value = num_val / self.ratio if hasattr(self, 'ratio') and self.ratio else num_val
         payload[self.attr] = final_value
+
+
+class ChargingPowerSensorConv(NumberSensorConv):
+    def decode(self, client, payload, value):
+        try:
+            current = float(value)
+            voltage = float(get_value(client.data, 'carStatus.voltage', 0))
+            if current > 0 and voltage > 0:
+                power = (current * voltage) / 1000.0
+                payload[self.attr] = round(power, 3)
+                return
+        except (ValueError, TypeError):
+            pass
+        payload[self.attr] = 0.0
+
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -238,6 +254,12 @@ class StateCoordinator(DataUpdateCoordinator):
                 'state_class': SensorStateClass.MEASUREMENT,
                 'device_class': SensorDeviceClass.CURRENT,
                 'unit_of_measurement': UnitOfElectricCurrent.AMPERE,
+            }),
+            ChargingPowerSensorConv('charging_power', prop='carStatus.obcOtpCur').with_option({
+                'icon': 'mdi:flash',
+                'state_class': SensorStateClass.MEASUREMENT,
+                'device_class': SensorDeviceClass.POWER,
+                'unit_of_measurement': UnitOfPower.KILO_WATT,
             }),
             MapSensorConv('key_status', prop='carStatus.keyStatus', map={
                 '0': '无钥匙',
