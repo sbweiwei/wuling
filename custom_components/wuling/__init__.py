@@ -388,7 +388,9 @@ class StateCoordinator(DataUpdateCoordinator):
     def model(self):
         name = self.car_info.get('carTypeName', '')
         model = self.car_info.get('model', '')
-        return f'{name} {model}'.strip()
+        level = self.car_info.get('level', '')
+        colorName = self.car_info.get('colorName', '')
+        return f'{name} {model} {level} {colorName}'.strip()
 
     async def update_from_service(self, call: ServiceCall):
         data = call.data
