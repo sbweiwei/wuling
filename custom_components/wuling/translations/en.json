@@ -42,6 +42,10 @@
       "total_mileage": {
         "name": "总里程"
       },
+      "veh_Spd_AvgDrvn": {
+        "name": "平均车速",
+        "unit": "km/h"
+      },
       "left_mileage": {
         "name": "纯电续航"
       },
