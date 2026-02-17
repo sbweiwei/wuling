@@ -65,6 +65,12 @@
       "battery_temp": {
         "name": "电池温度"
       },
+      "battery_temp_min": {
+        "name": "电池单体最低温度"
+      },
+      "battery_temp_max": {
+        "name": "电池单体最高温度"
+      },
       "battery_voltage": {
         "name": "电池电压"
       },
