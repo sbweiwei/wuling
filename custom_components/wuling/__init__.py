@@ -23,6 +23,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfTime,
     UnitOfPower,
+    UnitOfSpeed,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
@@ -170,6 +171,12 @@ class StateCoordinator(DataUpdateCoordinator):
                 'state_class': SensorStateClass.TOTAL_INCREASING,
                 'device_class': SensorDeviceClass.DISTANCE,
                 'unit_of_measurement': UnitOfLength.KILOMETERS,
+            }),
+            NumberSensorConv('veh_Spd_AvgDrvn', prop='carStatus.vehSpdAvgDrvn').with_option({
+                'icon': 'mdi:speedometer',
+                'state_class': SensorStateClass.MEASUREMENT,
+                'device_class':SensorDeviceClass.SPEED,
+                'unit_of_measurement': UnitOfSpeed.KILOMETERS_PER_HOUR,
             }),
             NumberSensorConv('oil_level', prop='carStatus.leftFuel').with_option({
                 'icon': 'mdi:water-percent',
