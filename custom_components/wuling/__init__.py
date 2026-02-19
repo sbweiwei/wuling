@@ -207,6 +207,18 @@ class StateCoordinator(DataUpdateCoordinator):
                 'entity_category': EntityCategory.DIAGNOSTIC,
                 'unit_of_measurement': UnitOfTemperature.CELSIUS,
             }),
+            NumberSensorConv('cdj_temp', prop='carStatus.cdjTemp').with_option({
+                'state_class': SensorStateClass.MEASUREMENT,
+                'device_class': SensorDeviceClass.TEMPERATURE,
+                'entity_category': EntityCategory.DIAGNOSTIC,
+                'unit_of_measurement': UnitOfTemperature.CELSIUS,
+            }),
+            NumberSensorConv('obc_temp', prop='carStatus.obcTemp').with_option({
+                'state_class': SensorStateClass.MEASUREMENT,
+                'device_class': SensorDeviceClass.TEMPERATURE,
+                'entity_category': EntityCategory.DIAGNOSTIC,
+                'unit_of_measurement': UnitOfTemperature.CELSIUS,
+            }),
             NumberSensorConv('battery_voltage', prop='carStatus.voltage').with_option({
                 'state_class': SensorStateClass.MEASUREMENT,
                 'device_class': SensorDeviceClass.VOLTAGE,
