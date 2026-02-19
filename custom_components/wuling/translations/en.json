@@ -71,6 +71,15 @@
       "battery_temp_max": {
         "name": "电池单体最高温度"
       },
+      "invActTemp": {
+        "name": "逆变器温度"
+      },
+      "obc_temp": {
+        "name": "交流充电机温度"
+      },
+      "cdj_temp": {
+        "name": "充电机插口温度"
+      },
       "battery_voltage": {
         "name": "电池电压"
       },
