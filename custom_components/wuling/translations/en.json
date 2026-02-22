@@ -86,6 +86,9 @@
       "battery_health": {
         "name": "电池健康"
       },
+      "battery_SOH": {
+        "name": "电池SOH"
+      },
       "battery_status": {
         "name": "电池状态"
       },
