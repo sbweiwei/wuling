@@ -231,6 +231,12 @@ class StateCoordinator(DataUpdateCoordinator):
                 'entity_category': EntityCategory.DIAGNOSTIC,
                 'unit_of_measurement': PERCENTAGE,
             }),
+            NumberSensorConv('battery_SOH', prop='carStatus.batSOH').with_option({
+                'icon': 'mdi:battery-heart',
+                'state_class': SensorStateClass.MEASUREMENT,
+                'entity_category': EntityCategory.DIAGNOSTIC,
+                'unit_of_measurement': PERCENTAGE,
+            }),
             SensorConv('battery_status', prop='carStatus.batteryStatus').with_option({
                 'icon': 'mdi:battery-unknown',
             }),
