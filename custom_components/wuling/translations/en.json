@@ -149,19 +149,19 @@
         "name": "右转灯"
       },
       "rearFogLight": {
-        "name": "rearFogLight"
+        "name": "后雾灯"
       },
       "frontFogLight": {
-        "name": "frontFogLight"
+        "name": "前雾灯"
       },
       "dipHeadLight": {
         "name": "dipHeadLight"
       },
       "lowBeamLight": {
-        "name": "lowBeamLight"
+        "name": "车头灯"
       },
       "positionLight": {
-        "name": "positionLight"
+        "name": "示廓灯"
       },  
       "charging": {
         "name": "充电状态"
