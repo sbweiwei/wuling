@@ -29,3 +29,6 @@ class ButtonEntity(XEntity, BaseEntity):
         if fun and callable(fun):
             res = await fun() or {}
             self._attr_extra_state_attributes.update(res)
+            # 主动写一次：否则按钮返回值要等下一次轮询（最多 60s）才出现在前端，
+            # 而轮询推送现在只写"有变化"的实体，按钮自身属性永远不变。
+            self.async_write_ha_state()

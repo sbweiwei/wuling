@@ -27,10 +27,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class LockEntity(XEntity, BaseEntity):
     @callback
-    def async_set_state(self, data: dict):
-        super().async_set_state(data)
+    def async_set_state(self, data: dict) -> bool:
+        changed = super().async_set_state(data)
         if self.attr in data:
             self._attr_is_locked = data[self.attr]
+        return changed
 
 class DoorLockEntity(LockEntity):
     async def async_lock(self, **kwargs) -> None:

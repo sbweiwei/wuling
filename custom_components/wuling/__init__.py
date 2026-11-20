@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import aiohttp
 import voluptuous as vol
@@ -29,7 +30,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.util.dt import now
 from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers.entity import EntityCategory
 
@@ -39,6 +39,7 @@ from .converters.base import *
 DOMAIN = 'wuling'
 TITLE = '五菱汽车'
 API_BASE = 'https://openapi.baojun.net/junApi/sgmw'
+SLOW_UPDATE_INTERVAL = 600  # 检车/胎压这类慢数据的拉取间隔（秒）
 
 SUPPORTED_PLATFORMS = [
     Platform.BUTTON,
@@ -150,13 +151,17 @@ class StateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"{entry.entry_id}-coordinator",
-            update_interval=timedelta(seconds=60),
+            update_interval=timedelta(seconds=4),
         )
         self.entry = entry
         self.data = {}
         self.extra = {}
         self.entities = {}
         self._last_nonzero_values = {}
+        self._version = 0             # 每轮数据 +1，用于解码结果缓存
+        self._decoded = {}            # 本轮解码结果，每轮只算一次
+        self._decoded_version = -1
+        self._slow_updated_at = 0.0   # 上次拉取检车/胎压的单调时钟
 
         from homeassistant.components.sensor import SensorStateClass, SensorDeviceClass
         from homeassistant.components.binary_sensor import BinarySensorDeviceClass
@@ -518,12 +523,30 @@ class StateCoordinator(DataUpdateCoordinator):
         self.data.update(data)
         self.extra = result
 
-        minute = now().minute
-        if minute % 10 == 0 or 'checkStatus' not in self.data:
-            await self.async_update_check()
-            await self.async_update_tire()
+        await self.async_update_slow_data()
 
+        # 数据已更新：递增版本号让解码缓存失效，然后统一推送一次。
+        # 原来这一步是 52 个实体各自在 _handle_coordinator_update 里各做一遍。
+        self._version += 1
+        self.push_state(self.decoded)
         return self.data
+
+    async def async_update_slow_data(self):
+        """检车 + 胎压：距上次拉取满 SLOW_UPDATE_INTERVAL 秒才再拉一次。
+
+        原来是 `now().minute % 10 == 0` 触发，同一分钟内若被服务调用或手动刷新
+        再次进入就会重复请求这两个接口；改成单调时钟门控同时修掉了这个重复。
+        两个接口互不依赖，并发拉取把等待从 2×RTT 压到 1×RTT。
+        """
+        if 'checkStatus' in self.data:
+            if time.monotonic() - self._slow_updated_at < SLOW_UPDATE_INTERVAL:
+                return
+        self._slow_updated_at = time.monotonic()
+        await asyncio.gather(
+            self.async_update_check(),
+            self.async_update_tire(),
+            return_exceptions=True,
+        )
 
     async def async_auth_start(self):
         result = await self.async_request('car/control/ignition/authorize', data={
@@ -632,18 +655,31 @@ class StateCoordinator(DataUpdateCoordinator):
             conv.decode(self, payload, value)
         return payload
 
+    @property
+    def decoded(self) -> dict:
+        """本轮数据的解码结果（带版本缓存）。
+
+        原来每个实体的 update() 都独立调用一次 decode()，即 52 次 × 75 条转换器；
+        按 _version 缓存后每轮刷新只解码一次。
+        """
+        if self._decoded_version != self._version:
+            self._decoded = self.decode(self.data)
+            self._decoded_version = self._version
+        return self._decoded
+
     def push_state(self, value: dict):
         if not value:
             return
         attrs = value.keys()
 
         for entity in self.entities.values():
-            if not hasattr(entity, 'subscribed_attrs'):
+            if not entity.added:
                 continue
             if not (entity.subscribed_attrs & attrs):
                 continue
-            entity.async_set_state(value)
-            if entity.added:
+            # 只有值真的变了才写状态：async_write_ha_state 每次都要重建 State、
+            # 比较属性并清一次 cached_property，而车停着时多数实体根本不变化。
+            if entity.async_set_state(value):
                 entity.async_write_ha_state()
 
     def subscribe_attrs(self, conv: Converter):
@@ -683,6 +719,8 @@ class XEntity(CoordinatorEntity):
         )
         self._attr_entity_registry_enabled_default = conv.enabled is not False
         self._attr_extra_state_attributes = {}
+        # 主状态值。HA 的 Entity 有同名类属性（默认 STATE_UNKNOWN），这里显式初始化，避免依赖 HA 内部实现
+        self._attr_state = None
         self._vars = {}
         self.subscribed_attrs = coordinator.subscribe_attrs(conv)
         coordinator.entities[conv.attr] = self
@@ -699,28 +737,34 @@ class XEntity(CoordinatorEntity):
                 self.async_restore_last_state(state.state, state.attributes)
 
         self.added = True
-        self.update()
+        # 只填自己的状态并写一次。原来调用 update() 会让每个实体各触发一次
+        # 全量解码 + 全量推送（N 个实体 = N 次 O(N) 的工作）。
+        self.async_set_state(self.coordinator.decoded)
+        self.async_write_ha_state()
 
     @callback
     def async_restore_last_state(self, state: str, attrs: dict):
         self._attr_state = state
 
     @callback
-    def async_set_state(self, data: dict):
+    def async_set_state(self, data: dict) -> bool:
+        """把本轮数据写进实体，返回主状态或附加属性是否发生变化。"""
         if hasattr(self.conv, 'option'):
             self._option.update(self.conv.option or {})
-        if self.attr in data:
+        changed = False
+        if self.attr in data and data[self.attr] != self._attr_state:
             self._attr_state = data[self.attr]
             self._attr_entity_picture = self._option.get('entity_picture')
+            changed = True
         for k in self.subscribed_attrs:
             if k not in data:
                 continue
-            self._attr_extra_state_attributes[k] = data[k]
-
-    def update(self):
-        payload = self.coordinator.decode(self.coordinator.data)
-        self.coordinator.push_state(payload)
+            if self._attr_extra_state_attributes.get(k) != data[k]:
+                self._attr_extra_state_attributes[k] = data[k]
+                changed = True
+        return changed
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self.update()
+        """刷新统一由 StateCoordinator._async_update_data 推送，此处不重复计算。"""
+        return

@@ -26,9 +26,10 @@ class SensorEntity(XEntity, BaseEntity):
         self._attr_native_unit_of_measurement = self._option.get('unit_of_measurement')
 
     @callback
-    def async_set_state(self, data: dict):
-        super().async_set_state(data)
+    def async_set_state(self, data: dict) -> bool:
+        changed = super().async_set_state(data)
         self._attr_native_value = self._attr_state
+        return changed
 
     @callback
     def async_restore_last_state(self, state: str, attrs: dict):

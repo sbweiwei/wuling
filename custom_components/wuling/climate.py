@@ -51,14 +51,15 @@ class ClimateEntity(XEntity, BaseEntity):
         self._attr_supported_features |= ClimateEntityFeature.FAN_MODE
 
     @callback
-    def async_set_state(self, data: dict):
-        super().async_set_state(data)
+    def async_set_state(self, data: dict) -> bool:
+        changed = super().async_set_state(data)
         if self.attr in data:
             self._attr_hvac_mode = data[self.attr]
         self._attr_hvac_action = {
             HVACMode.COOL: HVACAction.COOLING,
             HVACMode.HEAT: HVACAction.HEATING,
         }.get(self._attr_hvac_mode)
+        return changed
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -67,6 +68,8 @@ class ClimateEntity(XEntity, BaseEntity):
             num = kwargs[ATTR_TEMPERATURE]
             if ret := await self.async_ac_control(temperature=num):
                 self._attr_target_temperature = num
+                # 主动写一次，前端不必等到下一次轮询才看到目标温度
+                self.async_write_ha_state()
         return ret
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -95,12 +98,14 @@ class ClimateEntity(XEntity, BaseEntity):
 
         if ret:
             self._attr_hvac_mode = hvac_mode
+            self.async_write_ha_state()
         return ret
 
     async def async_set_fan_mode(self, fan_mode: str):
         """Set new target fan mode."""
         if await self.async_ac_control(blowerLvl=fan_mode):
             self._attr_fan_mode = fan_mode
+            self.async_write_ha_state()
 
     async def async_ac_control(self, **kwargs):
         """Generic A/C control: use current entity state as fallback."""
