@@ -403,15 +403,23 @@ class StateCoordinator(DataUpdateCoordinator):
             }),
             ProblemConv('engine_power', prop='checkStatus.enginePow', reverse=True).with_option({
                 'icon': 'mdi:turbine',
+                'device_class': BinarySensorDeviceClass.PROBLEM,
+                'entity_category': EntityCategory.DIAGNOSTIC,
             }),
             ProblemConv('engine_temp', prop='checkStatus.engineTemp', reverse=True).with_option({
                 'icon': 'mdi:coolant-temperature',
+                'device_class': BinarySensorDeviceClass.PROBLEM,
+                'entity_category': EntityCategory.DIAGNOSTIC,
             }),
             ProblemConv('abs', prop='checkStatus.absio').with_option({
                 'icon': 'mdi:car-brake-abs',
+                'device_class': BinarySensorDeviceClass.PROBLEM,
+                'entity_category': EntityCategory.DIAGNOSTIC,
             }),
             ProblemConv('power_steering', prop='checkStatus.pwrStrIo').with_option({
                 'icon': 'mdi:steering',
+                'device_class': BinarySensorDeviceClass.PROBLEM,
+                'entity_category': EntityCategory.DIAGNOSTIC,
             }),
             SensorConv('tire_temp', prop='tirePressure.tirTemp').with_option({
                 'icon': 'mdi:tire',
